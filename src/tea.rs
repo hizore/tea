@@ -171,7 +171,8 @@ async fn main() {
                     let build_systems = find_build_systems(repo_name);
                     if build_systems.is_empty() {
                         println!("No build systems found in the repository.");
-                    } else {
+                    } 
+                    else {
                         if let Some(system) = choose_build_system(&build_systems) {
                             let status = match system {
                                 "CMake" => {
