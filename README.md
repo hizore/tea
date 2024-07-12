@@ -5,3 +5,11 @@
 
 #### Пример использования:
 ![Пример использования](https://toukor.s-ul.eu/pqTQNSne)
+
+### Build:
+###  git clone https://github.com/hizore/tea
+###  cd tea
+###  cargo run
+
+## IMPORTANT
+### If u wanna use it as command in cmd/powershell just add directory with builded project to path 
