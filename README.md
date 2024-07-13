@@ -21,5 +21,5 @@
 ####  cargo build (or cargo run)
 
 ##
-## IMPORTANT
-### If u wanna use it as command in cmd/powershell just add directory with builded project to path 
+### IMPORTANT
+#### If u wanna use it as command in cmd/powershell just add directory with builded project to path 
