@@ -7,7 +7,6 @@
 
 ### Dependencies
 #### Rust
-#### Cargo
 #### CMake
 #### Meson
 
