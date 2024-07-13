@@ -7,6 +7,12 @@
 ![Пример использования](https://toukor.s-ul.eu/pqTQNSne)
 ##
 
+### Dependencies
+#### Rust (Rustup)
+#### Cargo
+#### CMake
+#### Meson
+
 ### Build:
 ####  git clone https://github.com/hizore/tea
 #### cd tea
