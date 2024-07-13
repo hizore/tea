@@ -6,6 +6,7 @@
 ##
 
 ### Dependencies
+#### Git
 #### Rust
 #### CMake
 #### Meson
