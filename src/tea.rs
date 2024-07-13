@@ -110,7 +110,7 @@ fn build_with_meson(path: &str) -> ExitStatus {
         .expect("failed to execute meson build")
 }
 
-fn configure_cargo(path: &str) -> ExitStatus {
+fn build_with_cargo(path: &str) -> ExitStatus {
     Command::new("cargo")
         .arg("build")
         .current_dir(path)
@@ -195,7 +195,7 @@ async fn main() {
                                     }
                                 }
                                 "Cargo" => {
-                                    if configure_cargo(repo_name).success() {
+                                    if build_with_cargo(repo_name).success() {
                                         Command::new("cargo")
                                             .arg("run")
                                             .current_dir(repo_name)
