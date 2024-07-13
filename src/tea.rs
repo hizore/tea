@@ -70,7 +70,7 @@ fn configure_cmake(path: &str) -> ExitStatus {
     std::fs::create_dir_all(&build_path).expect("failed to create build directory");
 
     Command::new("cmake")
-        .args(&["..", "-G", "MinGW Makefiles", "--fresh"])
+        .args(&["..", "--fresh"])
         .current_dir(&build_path)
         .status()
         .expect("failed to execute cmake configuration")
