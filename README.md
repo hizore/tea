@@ -6,7 +6,7 @@
 ##
 
 ### Dependencies
-#### Rust (Rustup)
+#### Rust
 #### Cargo
 #### CMake
 #### Meson
