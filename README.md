@@ -5,8 +5,8 @@
 
 ##
 
-### Use example:
-![Use example](https://toukor.s-ul.eu/pqTQNSne)
+### Usage example:
+![Usage example](https://toukor.s-ul.eu/pqTQNSne)
 ##
 
 ### Dependencies:
