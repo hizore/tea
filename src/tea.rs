@@ -118,6 +118,14 @@ fn build_with_cargo(path: &str) -> ExitStatus {
         .expect("failed to execute cargo build")
 }
 
+fn build_with_xmake(path: &str) -> ExitStatus {
+    Command::new("xmake")
+    .arg("build")
+    .current_dir(path)
+    .status()
+    .expect("failed to execute xmake build")
+}
+
 fn find_build_systems(path: &str) -> Vec<&'static str> {
     let mut systems = Vec::new();
     if Path::new(&format!("{}/CMakeLists.txt", path)).exists() {
@@ -131,6 +139,9 @@ fn find_build_systems(path: &str) -> Vec<&'static str> {
     }
     if Path::new(&format!("{}/Cargo.toml", path)).exists() {
         systems.push("Cargo");
+    }
+    if Path::new(&format!("{}/xmake.lua", path)).exists() {
+        systems.push("Xmake");
     }
     systems
 }
@@ -204,6 +215,19 @@ async fn main() {
                                     } 
                                     else {
                                         eprintln!("Cargo build failed.");
+                                        return;
+                                    }
+                                }
+                                "Xmake" => {
+                                    if build_with_xmake(repo_name).success() {
+                                        Command::new("xmake")
+                                            .arg("build")
+                                            .current_dir(repo_name)
+                                            .status()
+                                            .expect("failed to execute xmake build")
+                                    } 
+                                    else {
+                                        eprintln!("Xmake build failed.");
                                         return;
                                     }
                                 }
