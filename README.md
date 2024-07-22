@@ -9,7 +9,7 @@
 ![Use example](https://toukor.s-ul.eu/pqTQNSne)
 ##
 
-### Dependencies
+### Dependencies:
 #### Git
 #### Rust
 #### Xmake
