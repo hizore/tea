@@ -47,106 +47,76 @@ fn choose_repository(repos: &[Repository]) -> Option<&Repository> {
     io::stdin().read_line(&mut input).unwrap();
     let choice = input.trim().parse::<usize>().ok()?;
 
-    if choice > 0 && choice <= repos.len() {
-        Some(&repos[choice - 1])
-    } 
-    else {
-        None
-    }
+    repos.get(choice - 1)
 }
 
-fn download_repository(repo: &Repository) -> ExitStatus {
+fn download_repository(repo: &Repository) -> io::Result<()> {
     let url = format!("https://github.com/{}.git", repo.full_name);
     println!("Cloning repository from {}", url);
     Command::new("git")
         .arg("clone")
         .arg(url)
-        .status()
-        .expect("failed to execute git")
+        .status()?;
+    Ok(())
 }
 
-fn configure_cmake(path: &str) -> ExitStatus {
+fn configure_cmake(path: &str) -> io::Result<ExitStatus> {
     let build_path = format!("{}/build", path);
-    std::fs::create_dir_all(&build_path).expect("failed to create build directory");
-
+    std::fs::create_dir_all(&build_path)?;
     Command::new("cmake")
         .args(&["..", "--fresh"])
         .current_dir(&build_path)
         .status()
-        .expect("failed to execute cmake configuration")
 }
 
-fn build_with_cmake(path: &str) -> ExitStatus {
-    let build_path = format!("{}/build", path);
-
+fn build_with_cmake(path: &str) -> io::Result<ExitStatus> {
     Command::new("cmake")
         .args(&["--build", ".", "--parallel"])
-        .current_dir(&build_path)
+        .current_dir(format!("{}/build", path))
         .status()
-        .expect("failed to execute cmake build")
 }
 
-fn build_with_make(path: &str) -> ExitStatus {
-    Command::new("make")
-        .current_dir(path)
-        .status()
-        .expect("failed to execute make")
+fn build_with_make(path: &str) -> io::Result<ExitStatus> {
+    Command::new("make").current_dir(path).status()
 }
 
-fn configure_meson(path: &str) -> ExitStatus {
+fn configure_meson(path: &str) -> io::Result<ExitStatus> {
     Command::new("meson")
-        .arg("setup")
-        .arg("build")
+        .args(&["setup", "build"])
         .current_dir(path)
         .status()
-        .expect("failed to execute meson setup")
 }
 
-fn build_with_meson(path: &str) -> ExitStatus {
+fn build_with_meson(path: &str) -> io::Result<ExitStatus> {
     Command::new("meson")
         .arg("compile")
         .current_dir(format!("{}/build", path))
         .status()
-        .expect("failed to execute meson build")
 }
 
-fn build_with_cargo(path: &str) -> ExitStatus {
+fn build_with_cargo(path: &str) -> io::Result<ExitStatus> {
     Command::new("cargo")
         .arg("build")
         .current_dir(path)
         .status()
-        .expect("failed to execute cargo build")
-}
-
-fn build_with_xmake(path: &str) -> ExitStatus {
-    Command::new("xmake")
-    .arg("build")
-    .current_dir(path)
-    .status()
-    .expect("failed to execute xmake build")
 }
 
 fn find_build_systems(path: &str) -> Vec<&'static str> {
-    let mut systems = Vec::new();
-    if Path::new(&format!("{}/CMakeLists.txt", path)).exists() {
-        systems.push("CMake");
-    }
-    if Path::new(&format!("{}/Makefile", path)).exists() {
-        systems.push("Make");
-    }
-    if Path::new(&format!("{}/meson.build", path)).exists() {
-        systems.push("Meson");
-    }
-    if Path::new(&format!("{}/Cargo.toml", path)).exists() {
-        systems.push("Cargo");
-    }
-    if Path::new(&format!("{}/xmake.lua", path)).exists() {
-        systems.push("Xmake");
-    }
-    systems
+    [
+        ("CMakeLists.txt", "CMake"),
+        ("Makefile", "Make"),
+        ("meson.build", "Meson"),
+        ("Cargo.toml", "Cargo"),
+    ]
+    .iter()
+    .filter_map(|(file, system)| {
+        Path::new(&format!("{}/{}", path, file)).exists().then_some(*system)
+    })
+    .collect()
 }
 
-fn choose_build_system<'a>(systems: &'a [&str]) -> Option<&'a str> {
+
+fn choose_build_system<'a>(systems: &'a [&'a str]) -> Option<&'a str> {
     for (i, system) in systems.iter().enumerate() {
         println!("{}: {}", i + 1, system);
     }
@@ -157,107 +127,50 @@ fn choose_build_system<'a>(systems: &'a [&str]) -> Option<&'a str> {
     io::stdin().read_line(&mut input).unwrap();
     let choice = input.trim().parse::<usize>().ok()?;
 
-    if choice > 0 && choice <= systems.len() {
-        Some(systems[choice - 1])
-    } 
-    else {
-        None
-    }
+    systems.get(choice - 1).copied()
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     print!("Enter search query: ");
-    io::stdout().flush().unwrap();
+    io::stdout().flush()?;
 
     let mut query = String::new();
-    io::stdin().read_line(&mut query).unwrap();
-    let query = query.trim();
+    io::stdin().read_line(&mut query)?;
 
-    match search_repositories(query).await {
-        Ok(repos) => {
-            if let Some(repo) = choose_repository(&repos) {
-                if download_repository(repo).success() {
-                    let repo_name = repo.full_name.split('/').last().unwrap();
-                    let build_systems = find_build_systems(repo_name);
-                    if build_systems.is_empty() {
-                        println!("No build systems found in the repository.");
-                    } 
-                    else {
-                        if let Some(system) = choose_build_system(&build_systems) {
-                            let status = match system {
-                                "CMake" => {
-                                    if configure_cmake(repo_name).success() {
-                                        build_with_cmake(repo_name)
-                                    } 
-                                    else {
-                                        eprintln!("CMake configuration failed.");
-                                        return;
-                                    }
-                                }
-                                "Make" => build_with_make(repo_name),
-                                "Meson" => {
-                                    if configure_meson(repo_name).success() {
-                                        build_with_meson(repo_name)
-                                    } 
-                                    else {
-                                        eprintln!("Meson configuration failed.");
-                                        return;
-                                    }
-                                }
-                                "Cargo" => {
-                                    if build_with_cargo(repo_name).success() {
-                                        Command::new("cargo")
-                                            .arg("run")
-                                            .current_dir(repo_name)
-                                            .status()
-                                            .expect("failed to execute cargo run")
-                                    } 
-                                    else {
-                                        eprintln!("Cargo build failed.");
-                                        return;
-                                    }
-                                }
-                                "Xmake" => {
-                                    if build_with_xmake(repo_name).success() {
-                                        Command::new("xmake")
-                                            .arg("build")
-                                            .current_dir(repo_name)
-                                            .status()
-                                            .expect("failed to execute xmake build")
-                                    } 
-                                    else {
-                                        eprintln!("Xmake build failed.");
-                                        return;
-                                    }
-                                }
-                                _ => {
-                                    println!("Unsupported build system.");
-                                    return;
-                                }
-                            };
-                            if status.success() {
-                                println!("Build completed successfully!");
-                            } 
-                            else {
-                                println!("Build failed.");
-                            }
-                        } 
-                        else {
-                            println!("Invalid choice or no build system chosen.");
-                        }
-                    }
-                } 
-                else {
-                    println!("Failed to clone repository {}", repo.full_name);
-                }
-            } 
-            else {
-                println!("Invalid choice or no repository chosen.");
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to search repositories: {}", e);
-        }
+    let repos = search_repositories(query.trim()).await?;
+    let repo = choose_repository(&repos).ok_or("No repository chosen")?;
+    let repo_name = repo.full_name.split('/').last().unwrap();
+
+    download_repository(&repo)?;
+    let build_systems = find_build_systems(repo_name);
+    if build_systems.is_empty() {
+        return Err("No build systems found".into());
     }
+
+    let system = choose_build_system(&build_systems).ok_or("No build system chosen")?;
+    let status = match system {
+        "CMake" => {
+            configure_cmake(repo_name)?;
+            build_with_cmake(repo_name)?
+        }
+        "Make" => build_with_make(repo_name)?,
+        "Meson" => {
+            configure_meson(repo_name)?;
+            build_with_meson(repo_name)?
+        }
+        "Cargo" => {
+            build_with_cargo(repo_name)?;
+            Command::new("cargo")
+                .arg("run")
+                .current_dir(repo_name)
+                .status()?
+        }
+        _ => return Err("Unsupported build system".into()),
+    };
+
+    println!("{}", if status.success() { "Build completed successfully!" } 
+        else 
+        { "Build failed." });
+    Ok(())
 }
